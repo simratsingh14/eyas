@@ -1,4 +1,4 @@
-
+1;
 ## Function : find_equilibrium_points()
 ## ----------------------------------------------------
 ## Input:   x1_dot, x2_dot (Both are symbolic functions defined in terms of x1 
@@ -10,10 +10,11 @@
 ##          it proceeds to solve the equation (by calling the solve() function
 ##          in octave) and returns all possible values of x1 and x2 in form of a 
 ##          matrix.
-function eqbm_points = find_equilibrium_points(x1_dot,x2_dot)
+function eqbm_points = find_equilibrium_points(x1_dot, x2_dot)
   x1_dot == 0;
   x2_dot == 0;
   ################## ADD YOUR CODE HERE ######################
+  syms x1 x2 
   eqbm_points = solve(x1_dot, x2_dot, x1, x2);
   ############################################################  
 endfunction
@@ -42,12 +43,13 @@ function jacobian_matrices = find_jacobian_matrices(eqbm_points, x1_dot, x2_dot)
     solutions{k} = soln;
   endfor
   ################## ADD YOUR CODE HERE ######################
-  j1 = jacobian([x1_dot; x2_dot]);
+  j1 = jacobian([x1_dot; x2_dot]);  
   for k =1:length(eqbm_points)
-     j_temp = subs(j1,solutions(k));
-     jacobian_matrices = [jacobian_matrices j_temp];
+     j_temp = subs(j1,{x1,x2},solutions{k});
+     jacobian_matrices(k) = {j_temp};
   endfor
- ############################################################  
+  
+  ############################################################  
 endfunction
 
 ## Function : check_eigen_values()
@@ -71,10 +73,15 @@ function [eigen_values stability] = check_eigen_values(eqbm_pts, jacobian_matric
     flag = 1;
     ################## ADD YOUR CODE HERE ######################
     eigen_temp = eig(matrix);
-    if(real(eigen_temp)>0)
+    if(all(real(eigen_temp)<=0))
+      flag = 1;
+    
+    else
       flag = 0;
-    endif
-    eigen_values = [eigen_values eigen_temp];
+    
+  endif
+  eigen_values(k) = {eigen_temp};
+  
     ############################################################
     if flag == 1
       fprintf("The system is stable for equilibrium point (%d, %d) \n",double(eqbm_pts{k}.x1),double(eqbm_pts{k}.x2));
