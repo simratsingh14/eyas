@@ -6,8 +6,8 @@
 ## Purpose: This function takes eqbm_pts, jacobians, eigen_values and stability
 ##          and writes them to a filename Solutions.csv
 function write_to_csv(file_id, x1_dot, x2_dot, eqbm_pts, jacobians, eigen_values, stability)
-  filename = "Solutions.csv";
-  file_id = fopen(filename, "w");
+  #filename = "Solutions.csv";
+  #file_id = fopen(filename, "w");
   
   fputs (file_id, char(x1_dot));
   fputs (file_id, ",");

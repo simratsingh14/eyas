@@ -45,7 +45,7 @@ function jacobian_matrices = find_jacobian_matrices(eqbm_points, x1_dot, x2_dot)
   ################## ADD YOUR CODE HERE ######################
   j1 = jacobian([x1_dot; x2_dot]);  
   for k =1:length(eqbm_points)
-     j_temp = subs(j1,{x1,x2},solutions{k});
+     j_temp = double(subs(j1,{x1,x2},solutions{k}));
      jacobian_matrices(k) = {j_temp};
   endfor
   
@@ -72,7 +72,7 @@ function [eigen_values stability] = check_eigen_values(eqbm_pts, jacobian_matric
     matrix = jacobian_matrices{k};
     flag = 1;
     ################## ADD YOUR CODE HERE ######################
-    eigen_temp = eig(matrix);
+    eigen_temp = double(eig(matrix));
     if(all(real(eigen_temp)<=0))
       flag = 1;
     
@@ -80,6 +80,7 @@ function [eigen_values stability] = check_eigen_values(eqbm_pts, jacobian_matric
       flag = 0;
     
   endif
+  
   eigen_values(k) = {eigen_temp};
   
     ############################################################
