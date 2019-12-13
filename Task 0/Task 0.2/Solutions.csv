@@ -1,0 +1,3 @@
+x1*x2 - 2*x1,2*x1**2 - x2,Solutions,-1_2,0_0,1_2,Jacobians,0_-1;-4_-1,-2_0;0_-1,0_1;4_-1,Eigen Values,1.5616_-2.5616,-2_-1,1.5616_-2.5616,Stability,Unstable,Stable,Unstable,
+x1*x2 - x2,2*x1 - x2**2,Solutions,0_0,1_-1.4142,1_1.4142,Jacobians,0_-1;2_0,-1.4142_0;2_2.8284,1.4142_0;2_-2.8284,Eigen Values,0+1.4142i_0-1.4142i,2.8284_-1.4142,-2.8284_1.4142,Stability,Stable,Unstable,Unstable,
+x1**2*x2 + 2*x1,x1 + x2 - 1,Solutions,-1_2,0_1,2_-1,Jacobians,-2_1;1_1,2_0;1_1,-2_4;1_1,Eigen Values,-2.3028_1.3028,1_2,-3_2,Stability,Unstable,Unstable,Unstable,
