@@ -18,6 +18,7 @@ const int x_lower = 100;
 const int y_upper = 550;
 const int y_lower = 100;
 
+// joystick variables
 int x_axis_val, y_axis_val;
 int button_pin;
 
@@ -41,7 +42,7 @@ void MAG_init(){
     digitalWrite(MagF, LOW);
 }
 
-
+/
 void MagPick(void)  {
   digitalWrite(MagF, HIGH);
 }
@@ -116,9 +117,12 @@ if (Serial.available() >= 18)
     // To read switch data
     button_pin  = Serial.read();
     
-    // To read joystick data
+    /* To read joystick data */
+    // To read x axis value
     int analogMSB  = Serial.read();
     int analogLSB = Serial.read();
+    
+    // To read y axis value
     int analogMSB1 = Serial.read();
     int analogLSB1 = Serial.read();
     x_axis_val = analogLSB + (analogMSB*256);        
@@ -140,7 +144,8 @@ if (Serial.available() >= 18)
      MagPick();
   else if(button_pin == 8)
      MagDrop();
-  
+     
+  /* conditions for different motion of the motors */ 
   if(((x_axis_val > x_lower) && (x_axis_val < x_upper)) && (y_axis_val == 1023)){
    forward();
    Serial.println("forward");
