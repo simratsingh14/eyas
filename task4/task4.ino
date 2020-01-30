@@ -1,18 +1,17 @@
-#include "Event.h"
 
-#include "Timer.h"
+#include "timer.h"
 #include "I2Cdev.h"
 #include "MPU6050.h"
 #include <Wire.h>
 #include <math.h>
 
-Timer timer;
+Timer<1,micros> timer;
 MPU6050 mpu;
 int n = 1;
 int m = 1;
 
 float comp_alpha = 0.03;
-float roll = 0;
+float pitch = 0;
 int16_t ax, ay, az;
 int16_t gx, gy, gz, gnx, gny, gnz;
 float a[3] = {0, 0, 0};
@@ -137,9 +136,9 @@ void high_pass_filter(float Gx, float Gy, float Gz)
   gnz = Gz;
 }
 
-void complimentary_filter_roll()
+void complimentary_filter_pitch()
 {
-  roll = (1 - comp_alpha) * (roll - g[1] * dT) + (comp_alpha) * (atan(a[0] / abs(a[2]))) * (180 / 3.14);
+  pitch = (1 - comp_alpha) * (pitch - g[1] * dT) + (comp_alpha) * (atan(a[0] / abs(a[2]))) * (180 / 3.14);
 }
 
 // Function to test the connections
@@ -201,10 +200,10 @@ void setup() {
  digitalWrite(encodPinBR, HIGH);
  attachInterrupt(digitalPinToInterrupt(encodPinAR), ISRR, CHANGE);
 
-// int tickEvent1 = t.every(20, isr20ms);               //rpm calculation
- // int tickEvent2 = t.every(20, botDistance);
+ int tickEvent1 = timer.every(20, isr20ms);               //rpm calculation
+ int tickEvent2 = timer.every(20, botDistance);
 // timer.setInterval(1000); 
- //timer.start();
+// timer.start();
 // timer.setInterval(20);
 // timer.setCallback(isr20ms);
 
@@ -310,11 +309,11 @@ void lqr(int leftOffset,int rightOffset){
   float kv=0,kx=0,ka=0,ko=0;
   errorV = (reqVelocity - velocity); 
   errorD = (reqDistance - distance); 
-  errorA = (reqAngle - roll);
+  errorA = (reqAngle - pitch);
   errorO = (reqOmega - omega);
   U = (-kv*errorV - kx*errorD - ka*errorA - ko*errorO);
   U_new = constrain(U*285,-400,400);
-  moveMotor(U_new + leftOffset,U_new + rightOffset);
+  moveMotor(U_new - leftOffset,U_new - rightOffset);
  }
 
  
@@ -322,10 +321,10 @@ void lqr(int leftOffset,int rightOffset){
 
 void loop()  
 {
-  timer.update();
+  //timer.update();
   read_accel();
   read_gyro();
-  complimentary_filter_roll();
+  complimentary_filter_pitch();
   botVelocity();
   botDistance();
   Omega();
