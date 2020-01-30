@@ -1,8 +1,10 @@
-#include "timer.h"
+#include "Event.h"
+
+#include "Timer.h"
 #include "I2Cdev.h"
 #include "MPU6050.h"
-#include<Wire.h>
-#include<math.h>
+#include <Wire.h>
+#include <math.h>
 
 Timer timer;
 MPU6050 mpu;
@@ -69,7 +71,10 @@ float errorV, errorD, errorA, errorO;
 float distance =0;
 float angle = 0, omega = 0;
 float U;
+float U_new;
 float eeta = 0.04;
+int leftOffset = 0;
+int rightOffset = 0;
 
 void read_accel() {
   // read raw accel readings
@@ -143,9 +148,19 @@ void test() {
   Serial.println(mpu.testConnection() ? "MPU6050 connection successful" : "MPU6050 connection failed");
 }
 
+// Function to set offsets obtained by running IMU_zero example code
+void set_offsets() {
 
+  //to set accelerometer offsets
+  mpu.setXAccelOffset(-5699);
+  mpu.setYAccelOffset(-645);
+  mpu.setZAccelOffset(1237);
 
-
+  //to set gyro offsets
+  mpu.setXGyroOffset(-104);
+  mpu.setYGyroOffset(15);
+  mpu.setZGyroOffset(-10);
+}
 
 void setup() {
 
@@ -189,10 +204,10 @@ void setup() {
 // int tickEvent1 = t.every(20, isr20ms);               //rpm calculation
  // int tickEvent2 = t.every(20, botDistance);
 // timer.setInterval(1000); 
- timer.start();
- timer.setInterval(20);
- timer.setCallback(isr20ms);
- timer.start();
+ //timer.start();
+// timer.setInterval(20);
+// timer.setCallback(isr20ms);
+
  
 }
 
@@ -270,7 +285,7 @@ void isr20ms()
   //     (Change in time --> 20ms) * (PPR --> 840)
   
   left_RPM = (float)(((current_countLeft - left_prev_count) * 60)/(0.02*270));
-  right_RPM = (float)(((current_countRight - right_prev_count) * 60)/(0.02*27s0));
+  right_RPM = (float)(((current_countRight - right_prev_count) * 60)/(0.02*270));
   
   // Store current encoder count for next iteration
   left_prev_count = current_countLeft;
@@ -291,15 +306,15 @@ void Omega()
   omega = g[1];
 }
 
-void lqr(Leftoffset,Rightoffset){
-  float kv=,kx=,ka=,ko=;
+void lqr(int leftOffset,int rightOffset){
+  float kv=0,kx=0,ka=0,ko=0;
   errorV = (reqVelocity - velocity); 
   errorD = (reqDistance - distance); 
   errorA = (reqAngle - roll);
   errorO = (reqOmega - omega);
   U = (-kv*errorV - kx*errorD - ka*errorA - ko*errorO);
   U_new = constrain(U*285,-400,400);
-  moveMotor(U_new + Leftoffset,U_new + Rightoffset);
+  moveMotor(U_new + leftOffset,U_new + rightOffset);
  }
 
  
@@ -315,7 +330,7 @@ void loop()
   botDistance();
   Omega();
   
-  Leftoffset = eeta(velocity - left_RPM);
-  Rightoffset = eeta(velocity - Right_RPM);
-  lqr(Leftoffset,Rightoffset);
+  leftOffset = eeta*(velocity - left_RPM);
+  rightOffset = eeta*(velocity - right_RPM);
+  lqr(leftOffset,rightOffset);
 }
