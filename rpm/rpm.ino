@@ -23,11 +23,11 @@ volatile int left_prev_count = 0;
 volatile int right_prev_count = 0;
 volatile int left_RPM = 0;
 volatile int right_RPM = 0;
-int Leftoffset = 0;
-int Rightoffset = 0;
+int leftOffset = 0;
+int rightOffset = 0;
 float konstant = 11.11/2;
 float velocity = 0;
-float eeta = 0.3;
+float eeta = 0.85;
 
 //Timer<1,millis> timer;
 
@@ -169,8 +169,8 @@ int getRight_RPM()
 
 void loop() 
 {
-  moveMotor(255 + Leftoffset,255 + Rightoffset);
-  if(millis()-prevtime>=20)
+  moveMotor(255 + leftOffset,255 + rightOffset);
+  if(millis()- prevtime>=20)
   {
     left_RPM = countLeft*konstant;
     right_RPM = countRight*konstant;
@@ -183,6 +183,11 @@ void loop()
     countRight = 0;
     prevtime=millis();
   }
+
+    leftOffset = (255/velocity)*(velocity - left_RPM);
+    rightOffset = (255/velocity)*(velocity - right_RPM);
+  //leftOffset = eeta*(velocity - left_RPM);
+  //rightOffset = eeta*(velocity - right_RPM); 
   //Serial.print("difference");
   //Serial.println(countLeft-countRight);
   
