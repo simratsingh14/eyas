@@ -1,27 +1,58 @@
 1;
+close all;
+clear all;
+clc;
 pkg load control;
-a = -0.0060949;
-A = [0 1 0 0;0 -0.10572 1892.704 0; 0 0 0 1; 0 a 193.8901 0];
-A_d = [1 0.009995 0.09475 0.0003157; 0 0.9989 18.98 0.09475; 0 -3.051e-07 1.01 0.01003; 0 -6.111e-05 1.945 1.01];
-B = [0; 0.8997; 0; 0.05186];
-B_d = [4.501e-05;0.009009;2.596e-06;0.00052];
+
+km= 2833.33;
+ke= 0.0127;
+Mp= 830;
+Ip= 21632.83;
+l= 3.025;
+r= 3.25;
+Res= 4;
+Mw= 46;
+Iw= 485.875;
+g= 981;
+beeta= (2*Mw + (2*Iw/(r**2)) + Mp);
+alphaa= (Ip*beeta + 2*Mp*(l**2)*(Mw+ Iw/(r**2)));
+
+A = [0 1 0 0;
+     0 (2*km*ke*(Mp*l*r-Ip-Mp*(l**2)))/(Res*(r**2)*alphaa) ((Mp**2)*g*(l**2))/alphaa 0; 
+     0 0 0 1; 
+     0 (2*km*ke*(r*beeta-Mp*l))/(Res*(r**2)*alphaa) (Mp*g*l*beeta)/alphaa 0];
+     
+B = [0; 
+     (2*km*(Ip+Mp*(l**2)-Mp*l*r))/(Res*r*alphaa);
+     0;
+     (2*km*(Mp*l-r*beeta))/(Res*r*alphaa)];
+
 C = [1 0 0 0; 0 0 1 0];
 D = [0;0]
 Ts = 1/100;
 sys_s = ss(A,B,C,D);
-sys_d = c2d(sys_s,Ts)
-Q = [1000 0 0 0;0 100000/500 0 0; 0 0 1550000 0;0 0 0 15500000];
-R = 0.0001;
-K = dlqr(A,B,Q,R);
-y0 = [10;0;3.14;0];
-y = [2.5;0;3.14;0];
-cost = 0;
-for i = 1:100
-   U = -K*(y-y0);
-   cost = cost +  (y'*Q*y +U'*R*U);
-   y_new = (A_d-B_d*K)*y;
-   %y_new = A*y + B*U
-   y = y_new;
-   %U = -K*(y-y0);
-endfor
-abs(eigs(A_d))
+sys_d = c2d(sys_s,Ts,'zoh');
+
+A_d = sys_d.A;
+B_d = sys_d.B;
+Q = [1000 0 0 0;
+     0 10 0 0;
+     0 0 100000 0;
+     0 0 0 10];
+R = 1500;
+K = dlqr(A_d,B_d,Q,R);
+
+Ac = [(A_d-B_d*K)];
+Bc = [B_d];
+Cc = [sys_d.C];
+Dc = [sys_d.D];
+
+states = {'x' 'x_dot' 'phi' 'phi_dot'};
+inputs = {'r'};
+outputs = {'x'; 'phi'};
+x_set = [1;0];
+sys_cl = ss(Ac,Bc,Cc,Dc,Ts,'statename',states,'inputname',inputs,'outputname',outputs);
+t = 0:0.01:100;
+ref = ((1/dcgain(sys_cl))*x_set)*ones(size(t));
+[y,t,x]=lsim(sys_cl,ref,t);
+[AX,H1,H2] = plotyy(t,y(:,1),t,y(:,2),'plot');
