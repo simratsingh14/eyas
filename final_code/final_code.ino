@@ -63,9 +63,22 @@ volatile int left_RPM = 0;
 volatile int right_RPM = 0;
 int leftOffset = 0;
 int rightOffset = 0;
-float konstant = 11.11/2;
+float konstant = 11.11;
 float velocity = 0;
+float angular_velocity = 0;
+float circumference = 20.42;
 float eeta = 0.85;
+
+float reqVelocity = 0;
+float reqDistance = 0;
+float reqAngle = 0;
+float reqOmega = 0;
+float errorV, errorD, errorA, errorO;
+float distance = 0;
+float angle = 0, omega = 0;
+float U;
+float U_new;
+
 
 //Timer<1,millis> timer;
 
@@ -193,38 +206,12 @@ void setup()
   Serial.begin(9600);
   
 }
-
-
-/*void isr20ms()
-{
-  // Make a local copy of the global encoder count
-  volatile float current_countLeft = countLeft;
-  volatile float current_countRight = countRight;
-  
-  //     (Change in encoder count) * (60 sec/1 min)
-  // RPM = __________________________________________
-  //     (Change in time --> 20ms) * (PPR --> 840)
-  
-  left_RPM = (float)(((current_countLeft - left_prev_count) * 60)/(0.02*270));
-  right_RPM = (float)(((current_countRight - right_prev_count) * 60)/(0.02*270));
-  
-  // Store current encoder count for next iteration
-  left_prev_count = current_countLeft;
-  right_prev_count = current_countRight;
-  
-
-  
-  
-}*/
-
-
 void ISRL()
 {
   int state = digitalReadFast(encodPinAL);
   if (digitalReadFast(encodPinBL))
   {
-    state ? countLeft-- : countLeft++;
-    
+    state ? countLeft-- : countLeft++; 
   }
   else
   {
@@ -240,18 +227,20 @@ void ISRR()
   else
     state ? countRight-- : countRight++;}
 
-void moveForward() {
-  //analogWrite(PWML, 255);
-  //analogWrite(PWMR, 255);
+void moveForward()
+{
+  //analogWrite(PWML, 100);
+  //analogWrite(PWMR, 100);
   digitalWrite(InAL, HIGH);
   digitalWrite(InBL, LOW);
   digitalWrite(InAR, HIGH);
   digitalWrite(InBR, LOW);
 }
 
-void  moveBackward() {
-  //analogWrite(PWML, 255);
-  //analogWrite(PWMR, 255);
+void  moveBackward() 
+{
+  //analogWrite(PWML, 100);
+  //analogWrite(PWMR, 100);
   digitalWrite(InAL, LOW);
   digitalWrite(InBL, HIGH);
   digitalWrite(InAR, LOW);
@@ -281,67 +270,74 @@ void moveMotor(int Left, int Right)
    else if(Left==0 || Right==0)
    {
     stopMotor();
-  
-  }
+   }
 
 }
-
 void botVelocity(){
-  velocity = (left_RPM + right_RPM)/2.0;  
+  angular_velocity = (left_RPM + right_RPM)/2.0;  
+  velocity = (angular_velocity*circumference)/60;
 }
 
-int getleft_RPM()
-  {
-      left_RPM = countLeft*konstant;
-      Serial.print("Left RPM:");
-      Serial.println(left_RPM);
-      countLeft = 0;
-    return left_RPM;
-  }
-   
-int getRight_RPM()
-  {
-    right_RPM = countRight*konstant;
-    Serial.print("Right RPM:");
-    Serial.println(right_RPM);
-    countRight = 0;
-        
-  }
+
+void botangle()
+{
+  angle = roll;
+}
+
+void Omega()
+{
+  omega = g[1];
+}
+void botDistance(){                // need to put radius
+  
+  distance += (velocity*0.01);
+}
+
+void lqr(int leftOffset,int rightOffset){
+  float kx=-0.73317, kv=-1.90086, ka= -14992.82, ko= -1444.55;  
+  errorV = (reqVelocity - velocity); 
+  errorD = (reqDistance - distance); 
+  errorA = (reqAngle - roll);
+  errorO = (reqOmega - omega);
+  U = (-kv*errorV - kx*errorD - ka*errorA - ko*errorO);
+  U_new = -constrain(U/3000,-200,200);
+  moveMotor(U_new - leftOffset,U_new - rightOffset);
+  Serial.println(U);
+} 
+
+ void parameter(){
+  botVelocity();
+  botangle();
+  Omega();
+  botDistance();
+ }
 
 void loop() 
 {
-  read_accel();
-  read_gyro();
-  complimentary_filter_roll();
-
-  Serial.print(roll);
   
-  moveMotor(255 + leftOffset,255 + rightOffset);
-  if(millis()- prevtime>=20)
+  if(millis()- prevtime>=10)
   {
+    read_accel();
+    read_gyro();
+    complimentary_filter_roll();
     left_RPM = countLeft*konstant;
     right_RPM = countRight*konstant;
-    Serial.print("Left RPM:");
+    parameter();
+    leftOffset = eeta*(velocity - left_RPM);
+    rightOffset = eeta*(velocity - right_RPM);
+    lqr(leftOffset,rightOffset);
+   /*Serial.print("Left RPM:");
     Serial.println(left_RPM);
     Serial.print("Right RPM:");
     Serial.println(right_RPM);
-    Serial.print("\n");
+    Serial.print("\n");*/
     countLeft = 0;
     countRight = 0;
+    parameter();
     prevtime=millis();
   }
 
-    leftOffset = (255/velocity)*(velocity - left_RPM);
-    rightOffset = (255/velocity)*(velocity - right_RPM);
-  //leftOffset = eeta*(velocity - left_RPM);
-  //rightOffset = eeta*(velocity - right_RPM); 
-  //Serial.print("difference");
-  //Serial.println(countLeft-countRight);
-  
-  /*Serial.print("LC");
-  Serial.println(countLeft);
-  Serial.print("RC");
-  Serial.println(countRight);*/
-  
-  
-}  
+  //Serial.print("Velocity: ");
+  //Serial.println(velocity);
+ // lqr(leftOffset,rightOffset);
+} 
