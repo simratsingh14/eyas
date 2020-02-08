@@ -27,8 +27,8 @@ B = [0;
      0;
      (2*km*(Mp*l-r*beeta))/(Res*r*alphaa)];
 
-C = [1 0 0 0; 0 0 1 0];
-D = [0;0]
+C = eye(4);
+D = [0;0;0;0]
 Ts = 1/100;
 sys_s = ss(A,B,C,D);
 sys_d = c2d(sys_s,Ts,'zoh');
@@ -37,22 +37,41 @@ A_d = sys_d.A;
 B_d = sys_d.B;
 Q = [1000 0 0 0;
      0 10 0 0;
-     0 0 100000 0;
+     0 0 10000000 0;
      0 0 0 10];
-R = 1500;
+R = 100;
 K = dlqr(A_d,B_d,Q,R);
 
 Ac = [(A_d-B_d*K)];
 Bc = [B_d];
 Cc = [sys_d.C];
 Dc = [sys_d.D];
-
+x_initial = [0.5,0,0,0];
 states = {'x' 'x_dot' 'phi' 'phi_dot'};
 inputs = {'r'};
 outputs = {'x'; 'phi'};
-x_set = [1;0];
-sys_cl = ss(Ac,Bc,Cc,Dc,Ts,'statename',states,'inputname',inputs,'outputname',outputs);
-t = 0:0.01:100;
-ref = ((1/dcgain(sys_cl))*x_set)*ones(size(t));
-[y,t,x]=lsim(sys_cl,ref,t);
-[AX,H1,H2] = plotyy(t,y(:,1),t,y(:,2),'plot');
+x_set = [1;4;2;1];
+sys_cl = ss(Ac,Bc,Cc,Dc,Ts);
+t = 0:0.01:20;
+%ref = ((1/dcgain(sys_cl))x_set)ones(size(t),1);
+%[y,t,x]=lsim(sys_cl,ref,t);
+[y,t,x] = initial(sys_cl,x_initial,t); 
+%[AX,H1,H2] = plotyy(t,y(:,1),t,y(:,2),'plot');
+
+subplot(2,2,1);
+plot(t,y(:,1));
+title('Distance');
+
+subplot(2,2,2);
+plot(t,y(:,2));
+title('velocity');
+
+
+subplot(2,2,3);
+plot(t,y(:,3));
+title('angle');
+
+
+subplot(2,2,4);
+plot(t,y(:,4));
+title('angular velocity');
