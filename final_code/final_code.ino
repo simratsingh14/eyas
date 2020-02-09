@@ -18,9 +18,24 @@
 #define encodPinAR      18                      // encoder A pin
 #define encodPinBR      19                      // encoder B pin
 
+#define buzz            33  
+#define emagnet         8
 // creating object of class MPU6050
 // class default I2C address is 0x68
 
+
+//Flags
+bool forw_flag = 0;
+bool bak_flag = 0;
+bool left_flag = 0;
+bool right_flag = 0;
+bool buzz_flag = 0;
+bool slope_flag = 0;
+bool emag_flag = 0;
+
+int buzz_count = 0;
+int slope_count =0;
+int emag_count = 0;
 MPU6050 mpu;
 
 int n = 1, m = 1;
@@ -143,6 +158,10 @@ void set_offsets()                             // Function to set offsets obtain
   mpu.setZGyroOffset(-7);
 }
 
+
+
+
+
 void setup()
 {
   // join I2C bus (I2Cdev library doesn't do this automatically)
@@ -159,10 +178,10 @@ void setup()
   mpu.setFullScaleGyroRange(0);                       //
   set_offsets();                                      // To set the offsets
 
-  pinMode(33, OUTPUT);
-  pinMode(8, OUTPUT);
-  digitalWrite(33, LOW);
-  digitalWrite(8, LOW);
+  pinMode(buzz, OUTPUT);                                // BUZZER
+  pinMode(emagnet, OUTPUT);
+  digitalWrite(emagnet, LOW);
+  digitalWrite(buzz, LOW);
 
   pinMode(InAL, OUTPUT);
   pinMode(InBL, OUTPUT);
@@ -209,31 +228,41 @@ void ISRR()
 
 void moveMotor(int Left, int Right)
 {
+  analogWrite(PWML, abs(Left));
+  analogWrite(PWMR, abs(Right));
   if ((Left > 0) && (Right > 0))            // Forward Motor
   {
-    analogWrite(PWML, Left);
-    analogWrite(PWMR, Right);
+    
     digitalWrite(InAL, HIGH);
     digitalWrite(InBL, LOW);
-    digitalWrite(InAR, HIGH);
-    digitalWrite(InBR, LOW);
   }
-  else if ((Left < 0) && (Right < 0))       // Backward Motor
+  else if ((Left < 0))       // Backward Motor
   {
-    analogWrite(PWML, -1 * Left);
-    analogWrite(PWMR, -1 * Right);
     digitalWrite(InAL, LOW);
     digitalWrite(InBL, HIGH);
-    digitalWrite(InAR, LOW);
-    digitalWrite(InBR, HIGH);
   }
-  else if ((Left == 0) || (Right == 0))         // Stop Motor
+  else          // Stop Motor need to set a mininmum value to not take action
   {
     digitalWrite(InAL, LOW);
     digitalWrite(InBL, LOW);
-    digitalWrite(InAR, LOW);
-    digitalWrite(InBL, LOW);
+    
   }
+
+ if(Right > 0)
+ {
+    digitalWrite(InAR, HIGH);
+    digitalWrite(InBR, LOW);
+ }
+ else if(Right < 0)
+ {  digitalWrite(InAR, LOW);
+    digitalWrite(InBR, HIGH);
+ }
+ else
+ {
+    digitalWrite(InAR, LOW);
+    digitalWrite(InBR, LOW);
+ }
+ 
 }
 
 void botVelocity()
@@ -268,9 +297,43 @@ void lqr(int leftOffset, int rightOffset)
 
   U = (-kv * errorV - kx * errorD - ka * errorA - ko * errorO);
   U_new = -constrain(U, -200, 200);
-  moveMotor(U_new, U_new);
+  moveMotor(U_new - leftOffset, U_new - leftOffset);
   //Serial.println(U_new - leftOffset);
 }
+
+void electromag()
+{
+  if(emag_flag == 1)
+  {
+    if(emag_count%2==0)
+      {
+        digitalWrite(emagnet, HIGH);
+      }
+    else
+      {
+        digitalWrite(emagnet, LOW);
+      }
+    emag_count++;     
+  }  
+}
+
+void buzza()
+{
+  if(buzz_flag == 1)
+  {
+    if(buzz_count%2==0)
+      {
+        digitalWrite(buzz, HIGH);
+      }
+    else
+      {
+        digitalWrite(buzz, LOW);
+      }
+    emag_count++;     
+  }  
+}
+
+
 
 void parameter()
 {
