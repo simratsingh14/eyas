@@ -4,99 +4,76 @@
 #include<Wire.h>
 #include<math.h>
 
-// creating object of class MPU6050
-// class default I2C address is 0x68
-MPU6050 mpu;
-
-int n = 1;
-int m = 1;
-
-float comp_alpha = 0.03;
-float roll = 0;
-
-//accelerometer and gyroscope readings
-int16_t ax, ay, az;
-int16_t gx, gy, gz, gnx, gny, gnz;
-float a[3] = {0, 0, 0};
-float g[3] = {0, 0, 0};
-
-//filter constants
-float pi = 3.14;
-float f_cut = 5;
-float dT = 0.01;
-float Tau = (1 / (2 * pi*f_cut));            // Time constant
-float alpha = (Tau / (Tau + dT));
-
-//scaling factor
-float accel_sf = 16384;
-float gyro_sf = 131;
-
-//variables for filter
-float lpx = 0;
-float lpy = 0;
-float lpz = 0;
-float hpx = 0;
-float hpy = 0;
-float hpz = 0;
-
 // left motor pins
-#define InAL            10                      // INA motor pin
-#define InBL            11                      // INB motor pin
+#define InAL            11                      // INA motor pin
+#define InBL            10                      // INB motor pin
 #define PWML            6                       // PWM motor pin
 #define encodPinAL      2                       // encoder A pin
 #define encodPinBL      3                       // encoder B pin
 
 //right motor pins
-#define InAR            12                      // INA motor pin
-#define InBR            13                      // INB motor pin
+#define InAR            13                      // INA motor pin
+#define InBR            12                      // INB motor pin
 #define PWMR            5                       // PWM motor pin
-#define encodPinAR      18                       // encoder A pin
-#define encodPinBR      19                       // encoder B pin
+#define encodPinAR      18                      // encoder A pin
+#define encodPinBR      19                      // encoder B pin
 
-unsigned long start_Time = millis();
-long prevtime=0;
-volatile int countLeft = 0;
-volatile int countRight = 0;
-volatile int left_prev_count = 0;
-volatile int right_prev_count = 0;
-volatile int left_RPM = 0;
-volatile int right_RPM = 0;
-int leftOffset = 0;
-int rightOffset = 0;
-float konstant = 11.11;
-float velocity = 0;
+// creating object of class MPU6050
+// class default I2C address is 0x68
+
+MPU6050 mpu;
+
+int n = 1, m = 1;
+
+float comp_alpha = 0.03;
+float roll = 0;
+
+//accelerometer and gyroscope readings
+int16_t ax = 0, ay = 0, az = 0;
+int16_t gx = 0, gy = 0, gz = 0, gnx = 0, gny = 0, gnz = 0;
+float a[3] = {0, 0, 0};
+float g[3] = {0, 0, 0};
+
+//filter constants
+float pi = 3.14, f_cut = 5, dT = 0.01;
+float Tau = (1 / (2 * pi*f_cut));            // Time constant
+float alpha = (Tau / (Tau + dT));
+
+//scaling factors
+float accel_sf = 16384, gyro_sf = 131;
+
+//variables for filter
+float lpx = 0, lpy = 0, lpz = 0, hpx = 0, hpy = 0, hpz = 0;
+
+long prevtime = 0;
+volatile int countLeft = 0, countRight = 0;
+volatile int left_RPM = 0, right_RPM = 0;
+
+int leftOffset = 0, rightOffset = 0;
+float konstant = (60.0 / (540 * 0.01));
 float angular_velocity = 0;
-float circumference = 20.42;
+float circumference = 0.2042;
 float eeta = 0.85;
 
-float reqVelocity = 0;
-float reqDistance = 0;
-float reqAngle = 0;
-float reqOmega = 0;
-float errorV, errorD, errorA, errorO;
-float distance = 0;
-float angle = 0, omega = 0;
-float U;
-float U_new;
+float reqVelocity = 0, reqDistance = 0, reqAngle = 0, reqOmega = 0;
 
+float errorV = 0, errorD = 0, errorA = 0, errorO = 0;
+float velocity = 0, distance = 0, angle = 0, omega = 0;
+float U = 0, U_new = 0;
 
-//Timer<1,millis> timer;
-
-void read_accel() {
-  // read raw accel readings
+void read_accel()                               // read raw accelelerometer readings
+{
   mpu.getAcceleration(&ax, &ay, &az);
 
   a[0] = (ax / accel_sf);
   a[1] = (ay / accel_sf);
   a[2] = (az / accel_sf);
-  // Serial.println(a[0]);
-  low_pass_filter(a[0], a[1], a[2]);
 
+  low_pass_filter(a[0], a[1], a[2]);
 }
 
-void read_gyro() {
-  //read raw gyro raedings
-
+void read_gyro()                                //read raw gyroscope readings
+{
   mpu.getRotation(&gx, &gy, &gz);
 
   g[0] = (gx / gyro_sf);
@@ -108,7 +85,8 @@ void read_gyro() {
 }
 void low_pass_filter(float Ax, float Ay, float Az)
 {
-  if (n == 1) {
+  if (n == 1)
+  {
     lpx = (1 - alpha) * Ax;
     lpy = (1 - alpha) * Ay;
     lpz = (1 - alpha) * Az;
@@ -143,51 +121,49 @@ void high_pass_filter(float Gx, float Gy, float Gz)
 
 void complimentary_filter_roll()
 {
-  roll = (1 - comp_alpha) * (roll - g[1] * dT) + (comp_alpha) * (atan(a[0] / abs(a[2]))) * (180 / 3.14);
+  roll = (1 - comp_alpha) * (roll - g[1] * dT) + (comp_alpha) * (atan(a[0] / abs(a[2])));
 }
 
-// Function to test the connections
-void test() {
+void test()                                   // Function to test the connections
+{
   Serial.println("Testing device connections...");
   Serial.println(mpu.testConnection() ? "MPU6050 connection successful" : "MPU6050 connection failed");
 }
 
-// Function to set offsets obtained by running IMU_zero example code
-void set_offsets() {
-
+void set_offsets()                             // Function to set offsets obtained by running IMU_zero example code
+{
   //to set accelerometer offsets
-  mpu.setXAccelOffset(-5699);
-  mpu.setYAccelOffset(-645);
-  mpu.setZAccelOffset(1237);
+  mpu.setXAccelOffset(-5712);
+  mpu.setYAccelOffset(-615);
+  mpu.setZAccelOffset(5061);
 
-  //to set gyro offsets
-  mpu.setXGyroOffset(-104);
-  mpu.setYGyroOffset(15);
-  mpu.setZGyroOffset(-10);
+  //to set gyroscope offsets
+  mpu.setXGyroOffset(-100);
+  mpu.setYGyroOffset(20);
+  mpu.setZGyroOffset(-7);
 }
 
-
-void setup() 
+void setup()
 {
-
-// join I2C bus (I2Cdev library doesn't do this automatically)
+  // join I2C bus (I2Cdev library doesn't do this automatically)
 #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
   Wire.begin();
 #elif I2CDEV_IMPLEMENTATION == I2CDEV_BUILTIN_FASTWIRE
   Fastwire::setup(400, true);
 #endif
-  // initializing serial communication
-  Serial.begin(9600);
-  // initialising mpu sensor
-  mpu.initialize();
-  // To test the connections
-  test();
-  mpu.setFullScaleAccelRange(0);
-  mpu.setFullScaleGyroRange(0);
-  // To set the offsets
-  set_offsets();
-  
-  // put your setup code here, to run once:
+
+  Serial.begin(230400);                               // initializing serial communication
+  mpu.initialize();                                   // initialising mpu sensor
+  test();                                             // To test the connections
+  mpu.setFullScaleAccelRange(0);                      //
+  mpu.setFullScaleGyroRange(0);                       //
+  set_offsets();                                      // To set the offsets
+
+  pinMode(33, OUTPUT);
+  pinMode(8, OUTPUT);
+  digitalWrite(33, LOW);
+  digitalWrite(8, LOW);
+
   pinMode(InAL, OUTPUT);
   pinMode(InBL, OUTPUT);
   pinMode(PWML, OUTPUT);
@@ -203,141 +179,122 @@ void setup()
   pinMode(encodPinBR, INPUT);
   digitalWrite(encodPinAR, HIGH);                      // turn on pullup resistor
   attachInterrupt(digitalPinToInterrupt(18), ISRR, CHANGE);
-  Serial.begin(9600);
-  
 }
+
 void ISRL()
 {
   int state = digitalReadFast(encodPinAL);
   if (digitalReadFast(encodPinBL))
   {
-    state ? countLeft-- : countLeft++; 
+    state ? countLeft-- : countLeft++;
   }
   else
   {
     state ? countLeft++ : countLeft--;
   }
- }
+}
 
 void ISRR()
 {
   int state = digitalReadFast(encodPinAR);
   if (digitalReadFast(encodPinBR))
+  {
     state ? countRight++ : countRight--;
+  }
   else
-    state ? countRight-- : countRight++;}
-
-void moveForward()
-{
-  //analogWrite(PWML, 100);
-  //analogWrite(PWMR, 100);
-  digitalWrite(InAL, HIGH);
-  digitalWrite(InBL, LOW);
-  digitalWrite(InAR, HIGH);
-  digitalWrite(InBR, LOW);
-}
-
-void  moveBackward() 
-{
-  //analogWrite(PWML, 100);
-  //analogWrite(PWMR, 100);
-  digitalWrite(InAL, LOW);
-  digitalWrite(InBL, HIGH);
-  digitalWrite(InAR, LOW);
-  digitalWrite(InBR, HIGH);
-}
-
-void stopMotor(){
-  digitalWrite(InAL, LOW);
-  digitalWrite(InBL, LOW);
-  digitalWrite(InAR, LOW);
-  digitalWrite(InBL, LOW); 
+  {
+    state ? countRight-- : countRight++;
+  }
 }
 
 void moveMotor(int Left, int Right)
 {
-  if(Left>0 && Right>0){
-    analogWrite(PWML,Left);
-    analogWrite(PWMR,Right);
-    moveForward();
+  if ((Left > 0) && (Right > 0))            // Forward Motor
+  {
+    analogWrite(PWML, Left);
+    analogWrite(PWMR, Right);
+    digitalWrite(InAL, HIGH);
+    digitalWrite(InBL, LOW);
+    digitalWrite(InAR, HIGH);
+    digitalWrite(InBR, LOW);
   }
-  else if(Left<0 && Right<0){
-  analogWrite(PWML,-1*Left);
-  analogWrite(PWMR,-1*Right);
-  moveBackward();
+  else if ((Left < 0) && (Right < 0))       // Backward Motor
+  {
+    analogWrite(PWML, -1 * Left);
+    analogWrite(PWMR, -1 * Right);
+    digitalWrite(InAL, LOW);
+    digitalWrite(InBL, HIGH);
+    digitalWrite(InAR, LOW);
+    digitalWrite(InBR, HIGH);
   }
-
-   else if(Left==0 || Right==0)
-   {
-    stopMotor();
-   }
-
-}
-void botVelocity(){
-  angular_velocity = (left_RPM + right_RPM)/2.0;  
-  velocity = (angular_velocity*circumference)/60;
+  else if ((Left == 0) || (Right == 0))         // Stop Motor
+  {
+    digitalWrite(InAL, LOW);
+    digitalWrite(InBL, LOW);
+    digitalWrite(InAR, LOW);
+    digitalWrite(InBL, LOW);
+  }
 }
 
+void botVelocity()
+{
+  angular_velocity = (left_RPM + right_RPM) / 2.0;
+  velocity = (angular_velocity * circumference) / 60;
+}
 
 void botangle()
 {
   angle = roll;
 }
 
-void Omega()
+void botOmega()
 {
-  omega = g[1];
-}
-void botDistance(){                // need to put radius
-  
-  distance += (velocity*0.01);
+  omega = g[1] * (3.14 / 180);
 }
 
-void lqr(int leftOffset,int rightOffset){
-  float kx=-0.73317, kv=-1.90086, ka= -14992.82, ko= -1444.55;  
-  errorV = (reqVelocity - velocity); 
-  errorD = (reqDistance - distance); 
+void botDistance()
+{
+  distance += (velocity * 0.01);
+}
+
+void lqr(int leftOffset, int rightOffset)
+{
+  float kx = -28.0133, kv = -28.0913, ka = -97.9999 , ko = -9.1279; //-28.0133  -28.0913  -97.9999   -9.1279
+  //-1.6894  -22.1638  -80.6293   -7.8828
+  errorD = (reqDistance - distance);
+  errorV = (reqVelocity - velocity);
   errorA = (reqAngle - roll);
   errorO = (reqOmega - omega);
-  U = (-kv*errorV - kx*errorD - ka*errorA - ko*errorO);
-  U_new = -constrain(U/3000,-200,200);
-  moveMotor(U_new - leftOffset,U_new - rightOffset);
-  Serial.println(U);
-} 
 
- void parameter(){
+  U = (-kv * errorV - kx * errorD - ka * errorA - ko * errorO);
+  U_new = -constrain(U, -200, 200);
+  moveMotor(U_new, U_new);
+  //Serial.println(U_new - leftOffset);
+}
+
+void parameter()
+{
+  botDistance();
   botVelocity();
   botangle();
-  Omega();
-  botDistance();
- }
+  botOmega();
+}
 
-void loop() 
+void loop()
 {
-  
-  if(millis()- prevtime>=10)
+  if ((micros() - prevtime) >= 10000)
   {
     read_accel();
     read_gyro();
     complimentary_filter_roll();
-    left_RPM = countLeft*konstant;
-    right_RPM = countRight*konstant;
+    left_RPM = countLeft * konstant;
+    right_RPM = countRight * konstant;
     parameter();
-    leftOffset = eeta*(velocity - left_RPM);
-    rightOffset = eeta*(velocity - right_RPM);
-    lqr(leftOffset,rightOffset);
-   /*Serial.print("Left RPM:");
-    Serial.println(left_RPM);
-    Serial.print("Right RPM:");
-    Serial.println(right_RPM);
-    Serial.print("\n");*/
+    leftOffset = eeta * (angular_velocity - left_RPM);
+    rightOffset = eeta * (angular_velocity - right_RPM);
+    lqr(leftOffset, rightOffset);
     countLeft = 0;
     countRight = 0;
-    parameter();
-    prevtime=millis();
+    prevtime = micros();
   }
-
-  //Serial.print("Velocity: ");
-  //Serial.println(velocity);
- // lqr(leftOffset,rightOffset);
-} 
+}
