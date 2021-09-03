@@ -26,4 +26,4 @@ Team ID: eYRC-BP#804 | First-prize winner at National Level e-Yantra Robotics Co
 
 
 # Our Story:-
-Read our journey [here](https://shreya17.medium.co
+Read our journey [here](https://shreya17.medium.co)
