@@ -19,9 +19,6 @@ Team ID: eYRC-BP#804 | First-prize winner at National Level e-Yantra Robotics Co
 1. **Task 4**:- In this, we have to demonstrate the basic manoeuvrability of Robot while maintaining balance in the Bot.
 1. **Task 5**:- This was the final task, on which we were selected. This folder contains the final Code. 
 
-# Bot Design
-
-[Insert Bot image here]
 
 
 
